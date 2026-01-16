@@ -2,7 +2,7 @@ import fetch from 'node-fetch'
 import { format } from 'util'
 
 let handler = async (m, { conn, usedPrefix, text }) => {
-if (m.fromMe) return
+if (m.fromMe && !isOwner) return
 if (!/^https?:\/\//.test(text)) return m.reply(`❀ Por favor, ingresa la *url* de la pagina.`)
 let url = text
 await m.react('🕒')

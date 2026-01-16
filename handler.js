@@ -223,7 +223,7 @@ typeof plugin.command === "string" ?
 plugin.command === command : false
 global.comando = command
 
-if (!isOwners && settings.self) return
+if (m.fromMe && !isOwner) return
 if ((m.id.startsWith("NJX-") || (m.id.startsWith("BAE5") && m.id.length === 16) || (m.id.startsWith("B24E") && m.id.length === 20))) return
 
 if (global.db.data.chats[m.chat].primaryBot && global.db.data.chats[m.chat].primaryBot !== this.user.jid) {
