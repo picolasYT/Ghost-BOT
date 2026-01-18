@@ -43,7 +43,7 @@ global.sdemote = true
 
 global.group = "https://chat.whatsapp.com/HaKf6ezcwdbGzmH782eBal"
 global.community = "https://chat.whatsapp.com/G0kXqsteJFU74yrLtg79o6"
-global.channel = "https://whatsapp.com/channel/0029Vb64nWqLo4hb8cuxe23n"
+global.channel = "https://whatsapp.com/channel/0029VbBvO6u2f3EGGL1Hx22u"
 global.github = "https://github.com/PicolasYT/Ghost-BOT"
 global.gmail = "picolassoporte@gmail.com"
 global.ch = {
