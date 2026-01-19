@@ -3,16 +3,17 @@ import yts from "yt-search"
 
 const handler = async (m, { conn, text, usedPrefix, command }) => {
   try {
-    if (!text.trim())
+    if (!text.trim()) {
       return conn.reply(
         m.chat,
         '❀ Por favor, ingresa el nombre o link del video.',
         m
       )
+    }
 
     await m.react('🕒')
 
-    // Detectar link de YouTube o buscar
+    // Buscar o detectar link
     const match = text.match(
       /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/
     )
@@ -35,7 +36,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
       seconds
     } = video
 
-    // límite 30 min
+    // límite 30 minutos
     if (seconds > 1800)
       throw '⚠ El contenido supera el límite de duración (30 minutos).'
 
@@ -47,7 +48,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 > ☁︎ Publicado » *${ago}*
 > ➪ Link » ${url}`
 
-    // enviar miniatura
+    // miniatura
     const thumb = (await conn.getFile(thumbnail)).data
     await conn.sendMessage(
       m.chat,
@@ -85,18 +86,18 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     // VIDEO
     // =======================
     else if (['play2', 'ytv', 'ytmp4', 'mp4'].includes(command)) {
-      const video = await getVid(url)
-      if (!video?.url) throw '⚠ No se pudo obtener el video.'
+      const vid = await getVid(url)
+      if (!vid?.url) throw '⚠ No se pudo obtener el video.'
 
       await conn.reply(
         m.chat,
-        `> ❀ *Video procesado*\n> Servidor: \`${video.api}\``,
+        `> ❀ *Video procesado*\n> Servidor: \`${vid.api}\``,
         m
       )
 
       await conn.sendFile(
         m.chat,
-        video.url,
+        vid.url,
         `${title}.mp4`,
         `> ❀ ${title}`,
         m
@@ -133,35 +134,77 @@ handler.group = true
 export default handler
 
 // =======================
-// AUDIO (GawrGura)
+// AUDIO (multi API clásico)
 // =======================
 async function getAud(url) {
-  try {
-    const endpoint =
-      `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`
-    const res = await fetch(endpoint).then(r => r.json())
-    const link = res?.result?.download
-    if (!link) return null
-    return { url: link, api: 'GawrGura MP3' }
-  } catch {
-    return null
-  }
+  const apis = [
+    {
+      api: 'ZenzzXD',
+      endpoint: `https://api.zenzxz.my.id/downloader/ytmp3?url=${encodeURIComponent(url)}`,
+      extractor: r => r?.data?.download_url
+    },
+    {
+      api: 'Yupra',
+      endpoint: `https://api.yupra.my.id/api/downloader/ytmp3?url=${encodeURIComponent(url)}`,
+      extractor: r => r?.data?.download_url || r?.result?.link
+    },
+    {
+      api: 'Vreden',
+      endpoint: `https://api.vreden.web.id/api/v1/download/youtube/audio?url=${encodeURIComponent(url)}&quality=128`,
+      extractor: r => r?.result?.download?.url
+    },
+    {
+      api: 'Xyro',
+      endpoint: `https://api.xyro.site/download/youtubemp3?url=${encodeURIComponent(url)}`,
+      extractor: r => r?.result?.download
+    }
+  ]
+
+  return await fetchFromApis(apis)
 }
 
 // =======================
-// VIDEO (GawrGura)
+// VIDEO (multi API clásico)
 // =======================
 async function getVid(url) {
-  try {
-    const endpoint =
-      `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`
-    const res = await fetch(endpoint).then(r => r.json())
-    const link = res?.result?.download
-    if (!link) return null
-    return { url: link, api: 'GawrGura MP4' }
-  } catch {
-    return null
+  const apis = [
+{
+  api: 'GawrGura MP4',
+  endpoint: `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`,
+  extractor: r => r?.result?.download
+},
+{
+  api: 'GawrGura MP4',
+  endpoint: `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`,
+  extractor: r => r?.result?.download
+},
+{
+  api: 'GawrGura MP4',
+  endpoint: `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`,
+  extractor: r => r?.result?.download
+},
+{
+  api: 'GawrGura MP4',
+  endpoint: `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`,
+  extractor: r => r?.result?.download
+}
+  ]
+
+  return await fetchFromApis(apis)
+}
+
+// =======================
+// FETCH SECUENCIAL (old school)
+// =======================
+async function fetchFromApis(apis) {
+  for (const { api, endpoint, extractor } of apis) {
+    try {
+      const res = await fetch(endpoint).then(r => r.json())
+      const link = extractor(res)
+      if (link) return { url: link, api }
+    } catch {}
   }
+  return null
 }
 
 // =======================
