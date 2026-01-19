@@ -6,19 +6,17 @@ const handler = async (m, { conn, text, usedPrefix }) => {
 
   if (!text) {
     return m.reply(
-      `📢 *Uso del comando anuncio*\n\n` +
-      `• ${usedPrefix}anuncio <tiempo> <mensaje>\n` +
-      `• ${usedPrefix}anuncio stop\n\n` +
-      `Ejemplos:\n` +
-      `• ${usedPrefix}anuncio 5m API: ejemplo.com\n` +
-      `• ${usedPrefix}anuncio 2h Síguenos en nuestro canal`
+      `📢 Uso correcto:\n\n` +
+      `${usedPrefix}anuncio <tiempo> <mensaje>\n` +
+      `${usedPrefix}anuncio stop\n\n` +
+      `Ejemplo:\n${usedPrefix}anuncio 5m API: ejemplo.com`
     )
   }
 
-  // 🛑 STOP
+  // detener anuncio
   if (text.toLowerCase() === 'stop') {
     if (!anuncios[m.chat]) {
-      return m.reply('⚠️ No hay ningún anuncio activo en este chat.')
+      return m.reply('⚠️ No hay anuncios activos en este chat.')
     }
 
     clearInterval(anuncios[m.chat].interval)
@@ -27,16 +25,13 @@ const handler = async (m, { conn, text, usedPrefix }) => {
     return m.reply('🛑 Anuncio detenido correctamente.')
   }
 
-  // ⏱ Parseo tiempo
+  // parse tiempo
   const match = text.match(/^(\d+)([mhd])\s+([\s\S]+)/i)
   if (!match) {
-    return m.reply(
-      '❌ Formato inválido.\n\n' +
-      `Ejemplo correcto:\n${usedPrefix}anuncio 5m Mensaje del anuncio`
-    )
+    return m.reply('❌ Formato inválido.\nEjemplo: .anuncio 5m Mensaje')
   }
 
-  const cantidad = parseInt(match[1])
+  const cantidad = Number(match[1])
   const unidad = match[2].toLowerCase()
   const mensaje = match[3]
 
@@ -46,41 +41,34 @@ const handler = async (m, { conn, text, usedPrefix }) => {
   if (unidad === 'd') tiempoMs = cantidad * 24 * 60 * 60 * 1000
 
   if (tiempoMs < 60000) {
-    return m.reply('⚠️ El tiempo mínimo permitido es 1 minuto.')
+    return m.reply('⚠️ El tiempo mínimo es 1 minuto.')
   }
 
-  // 🔁 Reemplazar anuncio si ya existe
+  // reemplazar anuncio previo
   if (anuncios[m.chat]) {
     clearInterval(anuncios[m.chat].interval)
   }
 
-  const interval = setInterval(async () => {
-    try {
-      await conn.sendMessage(m.chat, { text: `📢 *ANUNCIO*\n\n${mensaje}` })
-    } catch (e) {
-      console.error('Error en anuncio:', e)
-    }
+  const interval = setInterval(() => {
+    conn.sendMessage(m.chat, {
+      text: `📢 *ANUNCIO OFICIAL*\n\n${mensaje}`
+    })
   }, tiempoMs)
 
   anuncios[m.chat] = {
     interval,
-    mensaje,
-    tiempoMs,
     creadoPor: m.sender
   }
 
   m.reply(
-    `📢 *Anuncio programado*\n\n` +
-    `⏱ Repetición: *cada ${cantidad}${unidad}*\n` +
-    `💬 Mensaje:\n${mensaje}\n\n` +
+    `✅ *Anuncio activado*\n\n` +
+    `⏱ Cada: *${cantidad}${unidad}*\n` +
     `🛑 Para detener:\n${usedPrefix}anuncio stop`
   )
 }
 
-handler.help = ['anuncio']
-handler.tags = ['admin']
 handler.command = ['anuncio']
 handler.group = true
-handler.admin = true   // 🔥 CLAVE PARA TU HANDLER
+handler.owner = true   // 🔥 SOLO EL CREADOR DEL BOT
 
 export default handler
