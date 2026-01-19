@@ -5,8 +5,8 @@ const handler = async (m, { conn, text, usedPrefix }) => {
 if (!text) return m.reply("❀ Por favor, proporciona el nombre de una canción o artista.")
 try {
 await m.react('🕒')
-const res = await axios.get(`${global.APIs.adonix.url}/download/spotify?apikey=${global.APIs.adonix.key}&q=${encodeURIComponent(text)}`)
-if (!res.data?.status || !res.data?.song || !res.data?.downloadUrl) throw new Error("No se encontró la canción en Adonix.")
+const res = await axios.get(`${global.APIs.gawrgura.url}/download/spotify?apikey=${global.APIs.gawrgura.key}&q=${encodeURIComponent(text)}`)
+if (!res.data?.status || !res.data?.song || !res.data?.downloadUrl) throw new Error("No se encontró la canción en gawrgura.")
 const s = res.data.song
 const data = { title: s.title || "Desconocido", artist: s.artist || "Desconocido", duration: s.duration || "Desconocido", image: s.thumbnail || null, download: res.data.downloadUrl, url: s.spotifyUrl || text }
 const caption = `「✦」Descargando *<${data.title}>*\n\nꕥ Autor » *${data.artist}*\nⴵ Duración » *${data.duration}*\n🜸 Enlace » ${data.url}`

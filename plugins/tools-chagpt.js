@@ -57,7 +57,7 @@ break
 case 'iavoz': case 'aivoz': case 'vozia': {
 if (!text) return conn.reply(m.chat, `❀ Ingrese lo que desea decirle a la inteligencia artificial con voz`, m)
 await m.react('🕒')
-const apiURL = `${global.APIs.adonix.url}/ai/iavoz?apikey=${global.APIs.adonix.key}&q=${encodeURIComponent(text)}&voice=Jorge`
+const apiURL = `${global.APIs.gawrgura.url}/ai/iavoz?apikey=${global.APIs.gawrgura.key}&q=${encodeURIComponent(text)}&voice=Jorge`
 const response = await axios.get(apiURL, { responseType: 'arraybuffer' })
 await conn.sendMessage(m.chat, { audio: Buffer.from(response.data), mimetype: 'audio/mpeg' }, { quoted: m })
 await m.react('✔️')

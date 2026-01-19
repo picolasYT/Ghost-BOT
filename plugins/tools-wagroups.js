@@ -4,7 +4,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 if (!text) return conn.reply(m.chat, `❍ Escribe el nombre del grupo a buscar.\nEj: *${usedPrefix + command} Memes*`, m)
 await m.react('🕒') 
 try {
-const res = await fetch(`${global.APIs.adonix.url}/search/wpgroups?apikey=${global.APIs.adonix.key}&q=${encodeURIComponent(text)}`)
+const res = await fetch(`${global.APIs.gawrgura.url}/search/wpgroups?apikey=${global.APIs.gawrgura.key}&q=${encodeURIComponent(text)}`)
 const json = await res.json()
 if (!json.status || !json.data || json.data.length === 0) return conn.reply(m.chat, `ꕤ No se encontraron grupos con: *${text}*`, m)
 let message = `✿ *Resultados de grupos para:* *${text}*\n\n`

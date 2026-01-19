@@ -6,7 +6,7 @@ const url = encodeURIComponent(args[0])
 await m.react('🕒')
 if (/(instagram\.com)/i.test(args[0])) {
 try {
-const api = `${global.APIs.adonix.url}/download/instagram?apikey=${global.APIs.adonix.key}&url=${url}`
+const api = `${global.APIs.gawrgura.url}/download/instagram?apikey=${global.APIs.gawrgura.key}&url=${url}`
 const res = await fetch(api)
 const json = await res.json()
 if (json.status && json.data?.length) {
@@ -15,7 +15,7 @@ data = json.data.map(v => v.url)
 }
 if (/(facebook\.com|fb\.watch)/i.test(args[0]) && !data.length) {
 try {
-const api = `${global.APIs.adonix.url}/download/facebook?apikey=${global.APIs.adonix.key}&url=${url}`
+const api = `${global.APIs.gawrgura.url}/download/facebook?apikey=${global.APIs.gawrgura.key}&url=${url}`
 const res = await fetch(api)
 const json = await res.json()
 if (json.status && json.result?.media?.video_hd) {

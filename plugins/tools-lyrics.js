@@ -24,9 +24,9 @@ primaryRes = null
 let final = primaryRes
 if (!final) {
 try {
-const adonixUrl = `${global.APIs.adonix.url}/search/lyrics?apikey=${global.APIs.adonix.key}&q=${encodeURIComponent(text)}`
-const res2 = await fetch(adonixUrl)
-if (!res2.ok) throw new Error(`Adonix HTTP: ${res2.status}`)
+const gawrguraUrl = `${global.APIs.gawrgura.url}/search/lyrics?apikey=${global.APIs.gawrgura.key}&q=${encodeURIComponent(text)}`
+const res2 = await fetch(gawrguraUrl)
+if (!res2.ok) throw new Error(`gawrgura HTTP: ${res2.status}`)
 const json2 = await res2.json()
 final = normalize(json2)
 } catch (e) {
