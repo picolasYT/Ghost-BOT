@@ -207,8 +207,8 @@ let txt = `̮   ̮   ̮   ̮   ̮   ̮   ̮   ̮   ̮   ̮   ̮   ̮   ̮   ̮  
 > 👻 Ver el estado de una página web.
 • *#translate • #traducir • #trad*
 > 👻 Traducir palabras en otros idiomas.
-• *#ia • #gemini*
-> 👻 Preguntar a Chatgpt.
+• *#claude • #ai*
+> 👻 Preguntar a Claude.
 • *#iavoz • #aivoz*
 > 👻 Hablar o preguntar a chatgpt mexicano modo voz.
 • *#tourl • #catbox*
