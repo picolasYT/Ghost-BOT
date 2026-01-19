@@ -2,51 +2,61 @@ import fetch from "node-fetch"
 
 const handler = async (m, { text }) => {
   if (!text) {
-    return m.reply("❀ Uso correcto:\n.ytstalk <usuario de YouTube>")
+    return m.reply("❀ Uso:\n.ytstalk <usuario | @handle | url>")
   }
 
   try {
-    const url = `https://gawrgura-api.onrender.com/stalk/youtube?user=${encodeURIComponent(text)}`
-    const res = await fetch(url)
-    const json = await res.json()
+    // limpiar texto
+    let user = text.trim()
 
-    if (!json || !json.result) {
-      return m.reply("❌ No se encontró información del canal.")
+    // si pega url completa
+    if (user.includes("youtube.com")) {
+      const match = user.match(/(@[a-zA-Z0-9._-]+)/)
+      if (match) user = match[1]
     }
 
-    const c = json.result
+    const apiUrl = `https://gawrgura-api.onrender.com/stalk/youtube?user=${encodeURIComponent(user)}`
+    const res = await fetch(apiUrl)
+    const json = await res.json()
+
+    // la API a veces responde distinto
+    const data = json.result || json.data || json
+
+    if (!data || !data.name) {
+      console.log("Respuesta API:", json)
+      return m.reply("❌ No se pudo obtener info del canal.")
+    }
 
     const msg = `
 📺 *YouTube Stalk*
 
-👤 *Canal:* ${c.name || "No disponible"}
-👥 *Subs:* ${c.subscribers || "?"}
-👁️ *Vistas:* ${c.views || "?"}
-🎥 *Videos:* ${c.videos || "?"}
-📅 *Creado:* ${c.created || "?"}
+👤 *Canal:* ${data.name}
+👥 *Suscriptores:* ${data.subscribers || "No disponible"}
+👁️ *Vistas:* ${data.views || "No disponible"}
+🎥 *Videos:* ${data.videos || "No disponible"}
+📅 *Creado:* ${data.created || "No disponible"}
 
-🔗 ${c.url || "No disponible"}
+🔗 ${data.url || "No disponible"}
 `.trim()
 
     await m.reply(msg)
 
   } catch (e) {
-    console.error(e)
-    m.reply("⚠️ Error al consultar la API.")
+    console.error("YTSTALK ERROR:", e)
+    m.reply("⚠️ Error consultando YouTube.")
   }
 }
 
-/* ===== CONFIGURACIÓN CLAVE PARA TU HANDLER ===== */
+handler.help = ["ytstalk"]
+handler.tags = ["tools"]
+handler.command = ["ytstalk"]
 
-handler.help = ['ytstalk']
-handler.tags = ['tools']
-handler.command = ['ytstalk']
-
-handler.owner = false     // ❌ NO solo owner
-handler.admin = false     // ❌ NO solo admin
-handler.group = false     // ✅ funciona en grupos
-handler.private = false   // ✅ funciona en privado
-handler.botAdmin = false
+// 👇 CLAVE PARA TU HANDLER
+handler.owner = false
+handler.admin = false
+handler.group = false
+handler.private = false
 handler.premium = false
+handler.botAdmin = false
 
 export default handler
