@@ -1,60 +1,52 @@
 import fetch from "node-fetch"
 
-const handler = async (m, { conn, text, usedPrefix }) => {
+const handler = async (m, { text }) => {
   if (!text) {
-    return m.reply(
-      `📌 Uso correcto:\n${usedPrefix}ytstalk <nombre o ID del canal>`
-    )
+    return m.reply("❀ Uso correcto:\n.ytstalk <usuario de YouTube>")
   }
 
-  await m.react("🔍")
-
   try {
-    const endpoint = `https://gawrgura-api.onrender.com/stalk/youtube?user=${encodeURIComponent(text)}`
-    const res = await fetch(endpoint).then(r => r.json())
+    const url = `https://gawrgura-api.onrender.com/stalk/youtube?user=${encodeURIComponent(text)}`
+    const res = await fetch(url)
+    const json = await res.json()
 
-    if (!res?.status || !res?.result) {
-      throw "No se encontró información del canal."
+    if (!json || !json.result) {
+      return m.reply("❌ No se encontró información del canal.")
     }
 
-    const data = res.result
+    const c = json.result
 
-    let info = `📺 *YouTube Stalk*
-    
-👤 *Canal:* ${data.name || "No disponible"}
-🔗 *Link:* ${data.url || "No disponible"}
-👁️ *Vistas:* ${data.views || "No disponible"}
-👥 *Suscriptores:* ${data.subscribers || "No disponible"}
-🎥 *Videos:* ${data.videos || "No disponible"}
-📅 *Creado:* ${data.createdAt || "No disponible"}
-💬 *Descripción:* ${data.description || "No disponible"}
-`
+    const msg = `
+📺 *YouTube Stalk*
 
-    // Si la API devuelve imagen
-    if (data.thumbnail) {
-      await conn.sendMessage(
-        m.chat,
-        {
-          image: { url: data.thumbnail },
-          caption: info.trim()
-        },
-        { quoted: m }
-      )
-    } else {
-      m.reply(info.trim())
-    }
-    await m.react("✅")
+👤 *Canal:* ${c.name || "No disponible"}
+👥 *Subs:* ${c.subscribers || "?"}
+👁️ *Vistas:* ${c.views || "?"}
+🎥 *Videos:* ${c.videos || "?"}
+📅 *Creado:* ${c.created || "?"}
+
+🔗 ${c.url || "No disponible"}
+`.trim()
+
+    await m.reply(msg)
 
   } catch (e) {
-    await m.react("✖️")
-    m.reply(typeof e === "string"
-      ? `⚠️ ${e}`
-      : "❌ Error al consultar la API de YouTube.")
+    console.error(e)
+    m.reply("⚠️ Error al consultar la API.")
   }
 }
 
+/* ===== CONFIGURACIÓN CLAVE PARA TU HANDLER ===== */
+
 handler.help = ['ytstalk']
 handler.tags = ['tools']
-handler.command = ['ytstalk', 'youtubestalk']
+handler.command = ['ytstalk']
+
+handler.owner = false     // ❌ NO solo owner
+handler.admin = false     // ❌ NO solo admin
+handler.group = false     // ✅ funciona en grupos
+handler.private = false   // ✅ funciona en privado
+handler.botAdmin = false
+handler.premium = false
 
 export default handler
