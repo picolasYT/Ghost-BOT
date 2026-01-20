@@ -2,9 +2,13 @@ import fetch from "node-fetch"
 import yts from "yt-search"
 import fs from "fs"
 import path from "path"
-import os from "os"
+
+const TMP_DIR = "./tmp"
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true })
 
 const handler = async (m, { conn, text, command }) => {
+  let tmpFile = null
+
   try {
     if (!text?.trim()) {
       return conn.reply(m.chat, '❀ Ingresa el nombre o link del video.', m)
@@ -12,7 +16,7 @@ const handler = async (m, { conn, text, command }) => {
 
     await m.react('🕒')
 
-    // 🔍 Buscar video o detectar link
+    // ================= BUSCAR VIDEO =================
     const match = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/)
     const query = match ? `https://youtu.be/${match[1]}` : text
     const search = await yts(query)
@@ -33,60 +37,41 @@ const handler = async (m, { conn, text, command }) => {
 > ✧︎ Duración » *${timestamp}*
 > ☁︎ Publicado » *${ago}*`
 
-    // 🖼️ Miniatura
     const thumb = (await conn.getFile(thumbnail)).data
     await conn.sendMessage(m.chat, { image: thumb, caption: info }, { quoted: m })
 
     // ================= AUDIO =================
-    if (['play', 'yta', 'ytmp3', 'playaudio'].includes(command)) {
+    if (['play','yta','ytmp3','playaudio'].includes(command)) {
+      const audioUrl = await getAud(url)
+      if (!audioUrl) throw '⚠ No se pudo obtener el audio.'
 
-      // 🎵 Pedir link a la API
-      const apiRes = await fetch(
-        `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`
-      ).then(r => r.json())
+      // nombre seguro
+      const safe = title.replace(/[\\/:*?"<>|]/g, '').slice(0, 50)
+      tmpFile = path.join(TMP_DIR, `${Date.now()}.mp3`)
 
-      const audioUrl = apiRes?.result?.download || apiRes?.result
-      if (!audioUrl || typeof audioUrl !== 'string') {
-        throw '⚠ No se pudo obtener el audio.'
-      }
+      // descargar audio
+      const res = await fetch(audioUrl)
+      const buffer = Buffer.from(await res.arrayBuffer())
+      fs.writeFileSync(tmpFile, buffer)
 
-      // 📂 Rutas temporales
-      const safeTitle = title.replace(/[\\/:*?"<>|]/g, '').slice(0, 60)
-      const tmpPath = path.join(os.tmpdir(), `${Date.now()}-${safeTitle}.mp3`)
-
-      // ⬇️ Descargar audio a archivo
-      const audioRes = await fetch(audioUrl)
-      const buffer = Buffer.from(await audioRes.arrayBuffer())
-      fs.writeFileSync(tmpPath, buffer)
-
-      // 🎧 Enviar AUDIO REAL (BUFFER)
+      // 🔥 ENVIAR COMO AUDIO REAL (FUNCIONA EN CELU)
       await conn.sendMessage(
         m.chat,
         {
-          audio: fs.readFileSync(tmpPath),
+          audio: fs.readFileSync(tmpFile),
           mimetype: 'audio/mpeg',
-          fileName: `${safeTitle}.mp3`
+          fileName: `${safe}.mp3`
         },
         { quoted: m }
       )
-
-      // 🧹 Limpiar
-      fs.unlinkSync(tmpPath)
 
       await m.react('✔️')
     }
 
     // ================= VIDEO =================
-    else if (['play2', 'ytv', 'ytmp4', 'mp4'].includes(command)) {
-
-      const apiRes = await fetch(
-        `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`
-      ).then(r => r.json())
-
-      const videoUrl = apiRes?.result?.download
-      if (!videoUrl || typeof videoUrl !== 'string') {
-        throw '⚠ No se pudo obtener el video.'
-      }
+    else if (['play2','ytv','ytmp4','mp4'].includes(command)) {
+      const videoUrl = await getVid(url)
+      if (!videoUrl) throw '⚠ No se pudo obtener el video.'
 
       await conn.sendFile(
         m.chat,
@@ -103,9 +88,11 @@ const handler = async (m, { conn, text, command }) => {
     await m.react('✖️')
     conn.reply(
       m.chat,
-      typeof e === 'string' ? e : `⚠ Error inesperado.\n${e.message || e}`,
+      typeof e === 'string' ? e : '⚠ Error inesperado.',
       m
     )
+  } finally {
+    if (tmpFile && fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile)
   }
 }
 
@@ -117,6 +104,46 @@ handler.tags = ['descargas']
 handler.group = true
 
 export default handler
+
+// =======================
+// AUDIO (GAWRGURA ROBUSTO)
+// =======================
+async function getAud(url) {
+  try {
+    const res = await fetch(
+      `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`
+    )
+    const json = await res.json()
+
+    const link =
+      (typeof json?.result === 'string' && json.result) ||
+      (typeof json?.result?.download === 'string' && json.result.download)
+
+    return link || null
+  } catch {
+    return null
+  }
+}
+
+// =======================
+// VIDEO (GAWRGURA ROBUSTO)
+// =======================
+async function getVid(url) {
+  try {
+    const res = await fetch(
+      `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`
+    )
+    const json = await res.json()
+
+    const link =
+      (typeof json?.result === 'string' && json.result) ||
+      (typeof json?.result?.download === 'string' && json.result.download)
+
+    return link || null
+  } catch {
+    return null
+  }
+}
 
 // =======================
 // UTIL
