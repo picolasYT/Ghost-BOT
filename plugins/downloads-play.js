@@ -2,7 +2,7 @@ import yts from "yt-search";
 import fetch from "node-fetch";
 
 const handler = async (m, { conn, text, usedPrefix, command }) => {
-  if (!text) return m.reply("🎶 Ingresa el nombre del video de YouTube.");
+  if (!text) return m.reply("🎶 Ingresa el nombre o enlace del video de YouTube.");
 
   await m.react("🕘");
 
@@ -54,10 +54,11 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 🔗 𝑬𝒏𝒍𝒂𝒄𝒆: ${url}
 
 ✧━───『 gһ᥆s𝗍 ᑲ᥆𝗍 』───━✧
-⚡ 𝑷𝒐𝒘𝒆𝒓𝒆𝒅 𝒃𝒚 𝒀𝒐𝒔𝒖𝒆 :D ⚡
+⚡ 𝑷𝒐𝒘𝒆𝒓𝒆dword 𝒃𝒚 𝒀𝒐𝒔𝒖𝒆 :D ⚡
 `;
 
     const thumb = (await conn.getFile(thumbnail)).data;
+    
     await conn.sendMessage(
       m.chat,
       {
@@ -107,29 +108,24 @@ handler.before = async (m, { conn }) => {
 
 const fetchBuffer = async (url) => {
   const response = await fetch(url);
-  return await response.buffer();
+  return Buffer.from(await response.arrayBuffer());
 };
 
 const downloadMedia = async (conn, m, url, type) => {
   try {
-    const msg =
-      type === "mp3" ? "🎵 Descargando audio..." : "🎬 Descargando video...";
-
+    const msg = type === "mp3" ? "🎵 Generando audio..." : "🎬 Generando video...";
     const sent = await conn.sendMessage(m.chat, { text: msg }, { quoted: m });
 
-    const apiUrl =
-      type === "mp3"
-        ? `https://api.darkcore.xyz/api/descargar/mp3/mp4?url=${encodeURIComponent(url)}&apikey=SHD_D332B82929CD4540C52BFEA1`
-        : `https://api.darkcore.xyz/api/descargar/mp3/mp4?url=${encodeURIComponent(url)}&apikey=SHD_D332B82929CD4540C52BFEA1`;
+    const apiUrl = `https://api.darkcore.xyz/api/descargar/mp3/mp4?url=${encodeURIComponent(url)}&apikey=SHD_D332B82929CD4540C52BFEA1`;
 
     const r = await fetch(apiUrl);
     const data = await r.json();
 
-    if (!data?.status || !data?.data?.url)
-      return m.reply("🚫 No se pudo descargar el archivo.");
+    if (!data?.status) return m.reply("🚫 Error en la API: No se pudo procesar el enlace.");
+    const fileUrl = type === "mp3" ? data.audio_url : data.video_url;
+    const fileTitle = cleanName(data.titulo || "Shadow_Download");
 
-    const fileUrl = data.data.url;
-    const fileTitle = cleanName(data.data.title || "video");
+    if (!fileUrl) return m.reply("🚫 No se encontró el enlace de descarga en la respuesta.");
 
     if (type === "mp3") {
       const audioBuffer = await fetchBuffer(fileUrl);
@@ -137,8 +133,8 @@ const downloadMedia = async (conn, m, url, type) => {
         m.chat,
         {
           audio: audioBuffer,
-          mimetype: "audio/mp4",
-          ptt: true,
+          mimetype: "audio/mpeg",
+          ptt: false,
         },
         { quoted: m },
       );
@@ -148,21 +144,22 @@ const downloadMedia = async (conn, m, url, type) => {
         {
           video: { url: fileUrl },
           mimetype: "video/mp4",
-          fileName: fileTitle + ".mp4",
+          fileName: `${fileTitle}.mp4`,
+          caption: `✅ *${fileTitle}*`,
         },
         { quoted: m },
       );
     }
 
     await conn.sendMessage(m.chat, {
-      text: `✅ Descarga completada\n\n🎼 Título: ${fileTitle}`,
+      text: `✅ ¡Listo! Se envió: ${fileTitle}`,
       edit: sent.key,
     });
 
     await m.react("✅");
   } catch (e) {
     console.error(e);
-    m.reply("❌ Error: " + e.message);
+    m.reply("❌ Error crítico: " + e.message);
     m.react("💀");
   }
 };
@@ -177,7 +174,6 @@ const formatViews = (views) => {
   return views.toString();
 };
 
-/* 🔥 ÚNICO CAMBIO REAL */
 handler.command = [
   "play",
   "play2",
