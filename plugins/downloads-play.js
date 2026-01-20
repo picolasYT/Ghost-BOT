@@ -44,13 +44,19 @@ const handler = async (m, { conn, text, command }) => {
     // ================= AUDIO (DOCUMENTO) =================
     if (["play", "yta", "ytmp3", "playaudio"].includes(command)) {
       const api = `https://api.akuari.my.id/downloader/youtube?url=${encodeURIComponent(url)}`
-      const res = await fetch(api)
-      const json = await res.json()
+const res = await fetch(api)
+const json = await res.json()
 
-      const audioUrl = json?.audio?.[0]?.url
-      if (!audioUrl || typeof audioUrl !== "string") {
-        throw "⚠ La API no devolvió un audio válido."
-      }
+const audioUrl =
+  (typeof json?.audio?.url === "string" && json.audio.url) ||
+  (typeof json?.audio === "string" && json.audio) ||
+  (typeof json?.result?.audio === "string" && json.result.audio) ||
+  (typeof json?.data?.audio === "string" && json.data.audio)
+
+if (!audioUrl) {
+  console.log("RESPUESTA API AKUARI:", json)
+  throw "⚠ La API no devolvió un audio válido."
+}
 
       const safe = title.replace(/[\\/:*?"<>|]/g, "").slice(0, 50)
       tmpFile = path.join(TMP_DIR, `${Date.now()}.mp3`)
