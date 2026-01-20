@@ -29,7 +29,6 @@ const handler = async (m, { conn, text, command }) => {
     if (!video) throw 'ꕥ No se encontraron resultados.'
 
     const { title, thumbnail, timestamp, views, ago, url, author, seconds } = video
-
     if (seconds > 1800) throw '⚠ Máximo 30 minutos.'
 
     const info = `「✦」Descargando *${title}*
@@ -42,7 +41,7 @@ const handler = async (m, { conn, text, command }) => {
     const thumb = (await conn.getFile(thumbnail)).data
     await conn.sendMessage(m.chat, { image: thumb, caption: info }, { quoted: m })
 
-    // ================= AUDIO (NOTA DE VOZ) =================
+    // ================= AUDIO → DOCUMENTO =================
     if (['play','yta','ytmp3','playaudio'].includes(command)) {
       const audioUrl = await getAud(url)
       if (!audioUrl) throw '⚠ No se pudo obtener el audio.'
@@ -54,13 +53,13 @@ const handler = async (m, { conn, text, command }) => {
       const buffer = Buffer.from(await res.arrayBuffer())
       fs.writeFileSync(tmpFile, buffer)
 
-      // 🔥 NOTA DE VOZ REAL
+      // 📄 ENVIAR COMO DOCUMENTO MP3
       await conn.sendMessage(
         m.chat,
         {
-          audio: fs.readFileSync(tmpFile),
+          document: fs.readFileSync(tmpFile),
           mimetype: 'audio/mpeg',
-          ptt: true   // 👈 ESTO LO CONVIERTE EN NOTA DE VOZ
+          fileName: `${safe}.mp3`
         },
         { quoted: m }
       )
