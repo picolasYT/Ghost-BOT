@@ -42,7 +42,7 @@ const handler = async (m, { conn, text, command }) => {
     const thumb = (await conn.getFile(thumbnail)).data
     await conn.sendMessage(m.chat, { image: thumb, caption: info }, { quoted: m })
 
-    // ================= AUDIO =================
+    // ================= AUDIO (NOTA DE VOZ) =================
     if (['play','yta','ytmp3','playaudio'].includes(command)) {
       const audioUrl = await getAud(url)
       if (!audioUrl) throw '⚠ No se pudo obtener el audio.'
@@ -54,13 +54,13 @@ const handler = async (m, { conn, text, command }) => {
       const buffer = Buffer.from(await res.arrayBuffer())
       fs.writeFileSync(tmpFile, buffer)
 
-      // 🔥 AUDIO REAL (FUNCIONA EN CELU Y PC)
+      // 🔥 NOTA DE VOZ REAL
       await conn.sendMessage(
         m.chat,
         {
           audio: fs.readFileSync(tmpFile),
           mimetype: 'audio/mpeg',
-          fileName: `${safe}.mp3`
+          ptt: true   // 👈 ESTO LO CONVIERTE EN NOTA DE VOZ
         },
         { quoted: m }
       )
@@ -104,7 +104,7 @@ handler.group = true
 export default handler
 
 // =======================
-// AUDIO – GAWRGURA (CORRECTO)
+// AUDIO – GAWRGURA
 // =======================
 async function getAud(url) {
   try {
@@ -123,7 +123,7 @@ async function getAud(url) {
 }
 
 // =======================
-// VIDEO – GAWRGURA (CORRECTO)
+// VIDEO – GAWRGURA
 // =======================
 async function getVid(url) {
   try {
