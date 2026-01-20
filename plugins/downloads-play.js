@@ -1,122 +1,153 @@
-import yts from 'yt-search'
 import fetch from 'node-fetch'
-import { getBuffer } from '../lib/message.js'
+import yts from 'yt-search'
+import fs from 'fs'
+import path from 'path'
 
-export default {
-  command: [
-    'play','mp3','ytmp3','ytaudio','playaudio',
-    'mp4','ytmp4','play2','ytv'
-  ],
-  tags: ['descargas'],
-  group: true,
+const TMP_DIR = './tmp'
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true })
 
-  async run(conn, m, args) {
-    try {
-      if (!args[0]) {
-        return m.reply('❀ Ingresa el nombre o link del video.')
-      }
+const handler = async (m, { conn, text, command }) => {
+  let tmpFile
 
-      const text = args.join(' ')
-      const match = text.match(
-        /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
-      )
+  try {
+    if (!text || !text.trim()) {
+      return conn.reply(m.chat, '❀ Ingresa el nombre o link del video.', m)
+    }
 
-      const query = match
-        ? 'https://youtu.be/' + match[1]
-        : text
+    await m.react('🕒')
 
-      /* 🔍 BUSCAR VIDEO */
-      const search = await yts(query)
-      if (!search.all.length) {
-        return m.reply('⚠ No se encontraron resultados.')
-      }
+    // ================= BUSCAR VIDEO =================
+    const ytRegex = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/|v\/))([a-zA-Z0-9_-]{11})/
+    const match = text.match(ytRegex)
+    const query = match ? `https://youtu.be/${match[1]}` : text
 
-      const video =
-        match
-          ? search.videos.find(v => v.videoId === match[1]) || search.all[0]
-          : search.all[0]
+    const search = await yts(query)
+    const video = match
+      ? search.videos.find(v => v.videoId === match[1])
+      : search.videos[0]
 
-      const {
-        title,
-        url,
-        image,
-        timestamp,
-        views,
-        ago,
-        author
-      } = video
+    if (!video) throw 'ꕥ No se encontraron resultados.'
 
-      const info = `「✦」Procesando *${title}*
+    const { title, thumbnail, timestamp, views, ago, url, author, seconds } = video
+
+    if (seconds > 1800) throw '⚠ Máximo 30 minutos.'
+
+    const info = `「✦」Descargando *${title}*
 
 > ❑ Canal » *${author?.name || 'Desconocido'}*
-> ♡ Vistas » *${views?.toLocaleString() || 'N/A'}*
-> ✧︎ Duración » *${timestamp || 'N/A'}*
-> ☁︎ Publicado » *${ago || 'N/A'}*`
+> ♡ Vistas » *${formatViews(views)}*
+> ✧︎ Duración » *${timestamp}*
+> ☁︎ Publicado » *${ago || 'Desconocido'}*`
 
-      const thumb = await getBuffer(image)
+    const thumb = (await conn.getFile(thumbnail)).data
+    await conn.sendMessage(m.chat, { image: thumb, caption: info }, { quoted: m })
+
+    // ================= AUDIO =================
+    if (['play','yta','ytmp3','playaudio'].includes(command)) {
+      const audioUrl = await getAud(url)
+      if (!audioUrl) throw '⚠ No se pudo obtener el audio.'
+
+      const safe = title.replace(/[\\/:*?"<>|]/g, '').slice(0, 50)
+      tmpFile = path.join(TMP_DIR, `${Date.now()}.mp3`)
+
+      const res = await fetch(audioUrl)
+      const buffer = Buffer.from(await res.arrayBuffer())
+      fs.writeFileSync(tmpFile, buffer)
+
+      // 🔥 AUDIO REAL (FUNCIONA EN CELU Y PC)
       await conn.sendMessage(
         m.chat,
-        { image: thumb, caption: info },
+        {
+          audio: fs.readFileSync(tmpFile),
+          mimetype: 'audio/mpeg',
+          fileName: `${safe}.mp3`
+        },
         { quoted: m }
       )
 
-      /* ================= MP3 ================= */
-      if (['play','mp3','ytmp3','ytaudio','playaudio'].includes(m.command)) {
-        const api =
-          `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`
-        const res = await fetch(api).then(r => r.json())
-
-        const audioUrl =
-          (typeof res?.result === 'string' && res.result) ||
-          (typeof res?.result?.download === 'string' && res.result.download)
-
-        if (!audioUrl) {
-          return m.reply('⚠ No se pudo obtener el audio.')
-        }
-
-        const audioBuffer = await getBuffer(audioUrl)
-
-        await conn.sendMessage(
-          m.chat,
-          {
-            audio: audioBuffer,
-            mimetype: 'audio/mpeg',
-            fileName: `${title}.mp3`
-          },
-          { quoted: m }
-        )
-      }
-
-      /* ================= MP4 ================= */
-      else {
-        const api =
-          `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`
-        const res = await fetch(api).then(r => r.json())
-
-        const videoUrl =
-          (typeof res?.result === 'string' && res.result) ||
-          (typeof res?.result?.download === 'string' && res.result.download)
-
-        if (!videoUrl) {
-          return m.reply('⚠ No se pudo obtener el video.')
-        }
-
-        const videoBuffer = await getBuffer(videoUrl)
-
-        await conn.sendMessage(
-          m.chat,
-          {
-            video: videoBuffer,
-            mimetype: 'video/mp4',
-            caption: `> ❀ ${title}`
-          },
-          { quoted: m }
-        )
-      }
-
-    } catch (e) {
-      console.error(e)
-      m.reply('⚠ Error inesperado.')
+      await m.react('✔️')
     }
+
+    // ================= VIDEO =================
+    else if (['play2','ytv','ytmp4','mp4'].includes(command)) {
+      const videoUrl = await getVid(url)
+      if (!videoUrl) throw '⚠ No se pudo obtener el video.'
+
+      await conn.sendMessage(
+        m.chat,
+        {
+          video: { url: videoUrl },
+          mimetype: 'video/mp4',
+          caption: title
+        },
+        { quoted: m }
+      )
+
+      await m.react('✔️')
+    }
+
+  } catch (e) {
+    await m.react('✖️')
+    conn.reply(m.chat, typeof e === 'string' ? e : '⚠ Error inesperado.', m)
+  } finally {
+    if (tmpFile && fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile)
   }
+}
+
+handler.command = [
+  'play','yta','ytmp3','playaudio',
+  'play2','ytv','ytmp4','mp4'
+]
+handler.tags = ['descargas']
+handler.group = true
+
+export default handler
+
+// =======================
+// AUDIO – GAWRGURA (CORRECTO)
+// =======================
+async function getAud(url) {
+  try {
+    const res = await fetch(
+      `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`
+    )
+    const json = await res.json()
+
+    if (typeof json?.result === 'string') return json.result
+    if (typeof json?.result?.download === 'string') return json.result.download
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+// =======================
+// VIDEO – GAWRGURA (CORRECTO)
+// =======================
+async function getVid(url) {
+  try {
+    const res = await fetch(
+      `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`
+    )
+    const json = await res.json()
+
+    if (typeof json?.result === 'string') return json.result
+    if (typeof json?.result?.download === 'string') return json.result.download
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+// =======================
+// UTIL
+// =======================
+function formatViews(views) {
+  if (!views) return 'No disponible'
+  if (views >= 1e9) return `${(views / 1e9).toFixed(1)}B`
+  if (views >= 1e6) return `${(views / 1e6).toFixed(1)}M`
+  if (views >= 1e3) return `${(views / 1e3).toFixed(1)}k`
+  return views.toString()
 }
