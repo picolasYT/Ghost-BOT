@@ -41,31 +41,44 @@ const handler = async (m, { conn, text, command }) => {
     const thumb = (await conn.getFile(thumbnail)).data
     await conn.sendMessage(m.chat, { image: thumb, caption: info }, { quoted: m })
 
-    // ================= AUDIO → DOCUMENTO =================
-    if (['play','yta','ytmp3','playaudio'].includes(command)) {
-      const audioUrl = await getAud(url)
-      if (!audioUrl) throw '⚠ No se pudo obtener el audio.'
+// ================= AUDIO =================
+if (['play','yta','ytmp3','playaudio'].includes(command)) {
+  const audioUrl = await getAud(url)
+  if (!audioUrl) throw '⚠ No se pudo obtener el audio.'
 
-      const safe = title.replace(/[\\/:*?"<>|]/g, '').slice(0, 50)
-      tmpFile = path.join(TMP_DIR, `${Date.now()}.mp3`)
+  const safe = title.replace(/[\\/:*?"<>|]/g, '').slice(0, 50)
+  tmpFile = path.join(TMP_DIR, `${Date.now()}.mp3`)
 
-      const res = await fetch(audioUrl)
-      const buffer = Buffer.from(await res.arrayBuffer())
-      fs.writeFileSync(tmpFile, buffer)
+  const res = await fetch(audioUrl)
 
-      // 📄 ENVIAR COMO DOCUMENTO MP3
-      await conn.sendMessage(
-        m.chat,
-        {
-          document: fs.readFileSync(tmpFile),
-          mimetype: 'audio/mpeg',
-          fileName: `${safe}.mp3`
-        },
-        { quoted: m }
-      )
+  // ❌ SI NO ES AUDIO → CORTA
+  const contentType = res.headers.get('content-type') || ''
+  if (!contentType.includes('audio')) {
+    throw '⚠ La API no devolvió un audio válido.'
+  }
 
-      await m.react('✔️')
-    }
+  const buffer = Buffer.from(await res.arrayBuffer())
+
+  // ❌ ARCHIVO MUY CHICO = NO ES AUDIO
+  if (buffer.length < 150 * 1024) {
+    throw '⚠ Audio inválido o dañado.'
+  }
+
+  fs.writeFileSync(tmpFile, buffer)
+
+  // ✅ ENVIAR COMO DOCUMENTO MP3 REAL
+  await conn.sendMessage(
+    m.chat,
+    {
+      document: buffer,
+      mimetype: 'audio/mpeg',
+      fileName: `${safe}.mp3`
+    },
+    { quoted: m }
+  )
+
+  await m.react('✔️')
+}
 
     // ================= VIDEO =================
     else if (['play2','ytv','ytmp4','mp4'].includes(command)) {
