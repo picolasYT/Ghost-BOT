@@ -6,6 +6,8 @@ import path from "path"
 const TMP_DIR = "./tmp"
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true })
 
+const MAX_AUDIO_SIZE = 16 * 1024 * 1024 // 16 MB
+
 const handler = async (m, { conn, text, command }) => {
   let tmpFile = null
 
@@ -16,8 +18,10 @@ const handler = async (m, { conn, text, command }) => {
 
     await m.react('🕒')
 
-    // ================= BUSCAR VIDEO =================
-    const match = text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/)
+    /* ================= BUSCAR VIDEO ================= */
+    const match = text.match(
+      /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/
+    )
     const query = match ? `https://youtu.be/${match[1]}` : text
     const search = await yts(query)
     const video = match
@@ -26,7 +30,16 @@ const handler = async (m, { conn, text, command }) => {
 
     if (!video) throw 'ꕥ No se encontraron resultados.'
 
-    const { title, thumbnail, timestamp, views, ago, url, author, seconds } = video
+    const {
+      title,
+      thumbnail,
+      timestamp,
+      views,
+      ago,
+      url,
+      author,
+      seconds
+    } = video
 
     if (seconds > 1800) throw '⚠ Máximo 30 minutos.'
 
@@ -38,29 +51,64 @@ const handler = async (m, { conn, text, command }) => {
 > ☁︎ Publicado » *${ago}*`
 
     const thumb = (await conn.getFile(thumbnail)).data
-    await conn.sendMessage(m.chat, { image: thumb, caption: info }, { quoted: m })
+    await conn.sendMessage(
+      m.chat,
+      { image: thumb, caption: info },
+      { quoted: m }
+    )
 
-    // ================= AUDIO =================
-    if (['play','yta','ytmp3','playaudio'].includes(command)) {
+    /* ================= AUDIO ================= */
+    if (['play', 'yta', 'ytmp3', 'playaudio'].includes(command)) {
       const audioUrl = await getAud(url)
       if (!audioUrl) throw '⚠ No se pudo obtener el audio.'
 
-      // nombre seguro
       const safe = title.replace(/[\\/:*?"<>|]/g, '').slice(0, 50)
       tmpFile = path.join(TMP_DIR, `${Date.now()}.mp3`)
 
-      // descargar audio
       const res = await fetch(audioUrl)
       const buffer = Buffer.from(await res.arrayBuffer())
       fs.writeFileSync(tmpFile, buffer)
 
-      // 🔥 ENVIAR COMO AUDIO REAL (FUNCIONA EN CELU)
+      const stats = fs.statSync(tmpFile)
+
+      if (stats.size > MAX_AUDIO_SIZE) {
+        // Documento (audios grandes)
+        await conn.sendMessage(
+          m.chat,
+          {
+            document: fs.readFileSync(tmpFile),
+            mimetype: 'audio/mpeg',
+            fileName: `${safe}.mp3`
+          },
+          { quoted: m }
+        )
+      } else {
+        // Audio normal (reproducible en celular)
+        await conn.sendMessage(
+          m.chat,
+          {
+            audio: fs.readFileSync(tmpFile),
+            mimetype: 'audio/mpeg',
+            fileName: `${safe}.mp3`
+          },
+          { quoted: m }
+        )
+      }
+
+      await m.react('✔️')
+    }
+
+    /* ================= VIDEO ================= */
+    else if (['play2', 'ytv', 'ytmp4', 'mp4'].includes(command)) {
+      const videoUrl = await getVid(url)
+      if (!videoUrl) throw '⚠ No se pudo obtener el video.'
+
       await conn.sendMessage(
         m.chat,
         {
-          audio: fs.readFileSync(tmpFile),
-          mimetype: 'audio/mpeg',
-          fileName: `${safe}.mp3`
+          video: { url: videoUrl },
+          mimetype: 'video/mp4',
+          caption: `> ❀ ${title}`
         },
         { quoted: m }
       )
@@ -68,25 +116,9 @@ const handler = async (m, { conn, text, command }) => {
       await m.react('✔️')
     }
 
-    // ================= VIDEO =================
-    else if (['play2','ytv','ytmp4','mp4'].includes(command)) {
-      const videoUrl = await getVid(url)
-      if (!videoUrl) throw '⚠ No se pudo obtener el video.'
-
-      await conn.sendFile(
-        m.chat,
-        videoUrl,
-        `${title}.mp4`,
-        `> ❀ ${title}`,
-        m
-      )
-
-      await m.react('✔️')
-    }
-
   } catch (e) {
     await m.react('✖️')
-    conn.reply(
+    await conn.reply(
       m.chat,
       typeof e === 'string' ? e : '⚠ Error inesperado.',
       m
@@ -105,9 +137,9 @@ handler.group = true
 
 export default handler
 
-// =======================
-// AUDIO (GAWRGURA ROBUSTO)
-// =======================
+/* ======================= */
+/* AUDIO – GAWRGURA        */
+/* ======================= */
 async function getAud(url) {
   try {
     const res = await fetch(
@@ -125,9 +157,9 @@ async function getAud(url) {
   }
 }
 
-// =======================
-// VIDEO (GAWRGURA ROBUSTO)
-// =======================
+/* ======================= */
+/* VIDEO – GAWRGURA        */
+/* ======================= */
 async function getVid(url) {
   try {
     const res = await fetch(
@@ -145,9 +177,9 @@ async function getVid(url) {
   }
 }
 
-// =======================
-// UTIL
-// =======================
+/* ======================= */
+/* UTIL                   */
+/* ======================= */
 function formatViews(views) {
   if (!views) return 'No disponible'
   if (views >= 1e9) return `${(views / 1e9).toFixed(1)}B`
