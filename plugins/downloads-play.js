@@ -1,28 +1,28 @@
 import yts from 'yt-search'
 import fetch from 'node-fetch'
-import { getBuffer } from '../lib/message.js' // ajustá la ruta si es necesario
-
-const isYTUrl = url =>
-  /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i.test(url)
+import { getBuffer } from '../lib/message.js'
 
 export default {
-  command: ['play', 'mp3', 'ytmp3', 'ytaudio', 'playaudio'],
+  command: [
+    'play','mp3','ytmp3','ytaudio','playaudio',
+    'mp4','ytmp4','play2','ytv'
+  ],
   tags: ['descargas'],
   group: true,
 
-  async run(client, m, args, usedPrefix, command) {
+  async run(conn, m, args) {
     try {
       if (!args[0]) {
         return m.reply('❀ Ingresa el nombre o link del video.')
       }
 
       const text = args.join(' ')
-      const videoMatch = text.match(
+      const match = text.match(
         /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
       )
 
-      const query = videoMatch
-        ? 'https://youtu.be/' + videoMatch[1]
+      const query = match
+        ? 'https://youtu.be/' + match[1]
         : text
 
       /* 🔍 BUSCAR VIDEO */
@@ -32,8 +32,8 @@ export default {
       }
 
       const video =
-        videoMatch
-          ? search.videos.find(v => v.videoId === videoMatch[1]) || search.all[0]
+        match
+          ? search.videos.find(v => v.videoId === match[1]) || search.all[0]
           : search.all[0]
 
       const {
@@ -46,7 +46,7 @@ export default {
         author
       } = video
 
-      const info = `「✦」Descargando *${title}*
+      const info = `「✦」Procesando *${title}*
 
 > ❑ Canal » *${author?.name || 'Desconocido'}*
 > ♡ Vistas » *${views?.toLocaleString() || 'N/A'}*
@@ -54,42 +54,69 @@ export default {
 > ☁︎ Publicado » *${ago || 'N/A'}*`
 
       const thumb = await getBuffer(image)
-      await client.sendMessage(
+      await conn.sendMessage(
         m.chat,
         { image: thumb, caption: info },
         { quoted: m }
       )
 
-      /* 🔗 GAWRGURA MP3 */
-      const apiUrl =
-        `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`
+      /* ================= MP3 ================= */
+      if (['play','mp3','ytmp3','ytaudio','playaudio'].includes(m.command)) {
+        const api =
+          `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`
+        const res = await fetch(api).then(r => r.json())
 
-      const apiRes = await fetch(apiUrl).then(r => r.json())
+        const audioUrl =
+          (typeof res?.result === 'string' && res.result) ||
+          (typeof res?.result?.download === 'string' && res.result.download)
 
-      const audioUrl =
-        (typeof apiRes?.result === 'string' && apiRes.result) ||
-        (typeof apiRes?.result?.download === 'string' && apiRes.result.download)
+        if (!audioUrl) {
+          return m.reply('⚠ No se pudo obtener el audio.')
+        }
 
-      if (!audioUrl) {
-        return m.reply('⚠ No se pudo obtener el audio.')
+        const audioBuffer = await getBuffer(audioUrl)
+
+        await conn.sendMessage(
+          m.chat,
+          {
+            audio: audioBuffer,
+            mimetype: 'audio/mpeg',
+            fileName: `${title}.mp3`
+          },
+          { quoted: m }
+        )
       }
 
-      /* 🎧 BUFFER (CLAVE PARA CELULAR) */
-      const audioBuffer = await getBuffer(audioUrl)
+      /* ================= MP4 ================= */
+      else {
+        const api =
+          `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`
+        const res = await fetch(api).then(r => r.json())
 
-      await client.sendMessage(
-        m.chat,
-        {
-          audio: audioBuffer,
-          mimetype: 'audio/mpeg',
-          fileName: `${title}.mp3`
-        },
-        { quoted: m }
-      )
+        const videoUrl =
+          (typeof res?.result === 'string' && res.result) ||
+          (typeof res?.result?.download === 'string' && res.result.download)
+
+        if (!videoUrl) {
+          return m.reply('⚠ No se pudo obtener el video.')
+        }
+
+        const videoBuffer = await getBuffer(videoUrl)
+
+        await conn.sendMessage(
+          m.chat,
+          {
+            video: videoBuffer,
+            mimetype: 'video/mp4',
+            caption: `> ❀ ${title}`
+          },
+          { quoted: m }
+        )
+      }
 
     } catch (e) {
       console.error(e)
-      m.reply('⚠ Error inesperado al procesar el audio.')
+      m.reply('⚠ Error inesperado.')
     }
   }
 }
