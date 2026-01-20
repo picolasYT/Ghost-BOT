@@ -111,8 +111,8 @@ const downloadMedia = async (conn, m, url, type) => {
     const sent = await conn.sendMessage(m.chat, { text: msg }, { quoted: m })
 
     const apiUrl = type === "mp3"
-      ? `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}&apikey=SHADOWKEYBOTMD`
-      : `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}&apikey=SHADOWKEYBOTMD`
+      ? `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}&apikey=null`
+      : `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}&apikey=null`
 
     const r = await fetch(apiUrl)
     const data = await r.json()
