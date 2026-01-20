@@ -139,23 +139,23 @@ export default handler
 async function getAud(url) {
   const apis = [
     {
-      api: 'ZenzzXD',
-      endpoint: `https://api.zenzxz.my.id/downloader/ytmp3?url=${encodeURIComponent(url)}`,
+      api: 'GawrGura MP3',
+      endpoint: `https://gawrgura-api.onrender.com/download/ytmp43url=${encodeURIComponent(url)}`,
       extractor: r => r?.data?.download_url
     },
     {
-      api: 'Yupra',
-      endpoint: `https://api.yupra.my.id/api/downloader/ytmp3?url=${encodeURIComponent(url)}`,
+      api: 'GawrGura MP3',
+      endpoint: `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`,
       extractor: r => r?.data?.download_url || r?.result?.link
     },
     {
-      api: 'Vreden',
-      endpoint: `https://api.vreden.web.id/api/v1/download/youtube/audio?url=${encodeURIComponent(url)}&quality=128`,
+      api: 'GawrGura MP3',
+      endpoint: `https://gawrgura-api.onrender.com/download/ytmp3?url=${encodeURIComponent(url)}`,
       extractor: r => r?.result?.download?.url
     },
     {
-      api: 'Xyro',
-      endpoint: `https://api.xyro.site/download/youtubemp3?url=${encodeURIComponent(url)}`,
+      api: 'GawrGura MP3',
+      endpoint: `https://gawrgura-api.onrender.com/download/ytmp4?url=${encodeURIComponent(url)}`,
       extractor: r => r?.result?.download
     }
   ]
