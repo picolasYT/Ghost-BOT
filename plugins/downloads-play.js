@@ -84,7 +84,10 @@ const downloadMedia = async (conn, m, url, type) => {
     const sent = await conn.sendMessage(m.chat, { text: `⏳ Procesando ${type}...` }, { quoted: m });
 
     // Tu API corregida con la nueva Key
-    const apiUrl = `https://api.darkcore.xyz/api/descargar/mp3/mp4?url=${encodeURIComponent(url)}&key=shd_488b9c30e05c0927d77f79a6`;
+    const apiUrl =
+  type === "mp3"
+    ? `https://api.darkcore.xyz/api/descargar/mp3?url=${encodeURIComponent(url)}&key=shd_488b9c30e05c0927d77f79a6`
+    : `https://api.darkcore.xyz/api/descargar/mp4?url=${encodeURIComponent(url)}&key=shd_488b9c30e05c0927d77f79a6`;
 
     const r = await fetch(apiUrl);
     const data = await r.json();
