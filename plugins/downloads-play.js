@@ -104,9 +104,9 @@ const downloadMedia = async (conn, m, url, type) => {
       await conn.sendMessage(
         m.chat,
         {
-          audio: audioBuffer,
-          mimetype: "audio/mpeg",
-          ptt: false,
+          audio: buffer,
+          mimetype: "audio/mp4",
+          ptt: true,
         },
         { quoted: m }
       );
