@@ -87,17 +87,7 @@ const downloadMedia = async (conn, m, url, type) => {
     const apiUrl = `https://api.darkcore.xyz/api/descargar/mp3/mp4?url=${encodeURIComponent(url)}&key=shd_488b9c30e05c0927d77f79a6`;
 
     const r = await fetch(apiUrl);
-const text = await r.text();
-
-console.log("API RESPONSE:", text);
-
-// Intentamos parsear solo si es JSON
-let data;
-try {
-  data = JSON.parse(text);
-} catch {
-  throw new Error("La API no devolvió JSON válido");
-}
+    const data = await r.json();
 
     if (!data?.status) return m.reply("🚫 Error: La API no pudo procesar el archivo.");
 
