@@ -1,14 +1,16 @@
 import fetch from "node-fetch"
 
 const RAPID_KEY = "814651014emsh71e028776d9a33dp1600e6jsn2e4b042ad0f6"
-const RAPID_HOST = "netflix-api8.p.rapidapi.com"
+const RAPID_HOST = "netflix133.p.rapidapi.com"
 
-const handler = async (m, { conn }) => {
+const handler = async (m, { conn, text }) => {
   try {
     await m.react("🎬")
 
-    const url =
-      "https://netflix-api8.p.rapidapi.com/api/title/type?titleIds=70140425,81566729,81171201,70172929"
+    // ID fijo o pasado por comando
+    const contentId = text?.trim() || "81040344"
+
+    const url = `https://netflix133.p.rapidapi.com/content?contentId=${contentId}`
 
     const res = await fetch(url, {
       headers: {
@@ -19,26 +21,23 @@ const handler = async (m, { conn }) => {
 
     const data = await res.json()
 
-    // 🔥 ACA ESTA EL FIX
-    const movies = data?.titles || data || []
-
-    if (!Array.isArray(movies) || !movies.length) {
-      return m.reply("❌ No se pudieron obtener películas.")
+    if (!data?.title) {
+      return m.reply("❌ No se pudo obtener la película.")
     }
 
-    let text = "🎬 *Películas disponibles*\n\n"
-
-    for (const movie of movies) {
-      text +=
-        `🎥 *${movie.title || "Sin título"}*\n` +
-        `📅 Año: ${movie.releaseYear || "N/D"}\n` +
-        `⭐ Rating: ${movie.rating || "N/D"}\n` +
-        `📝 Tipo: ${movie.type || "N/D"}\n\n`
-    }
+    let msg =
+      `🎬 *${data.title}*\n\n` +
+      `📅 Año: ${data.year || "N/D"}\n` +
+      `⭐ Rating: ${data.rating || "N/D"}\n` +
+      `📝 Tipo: ${data.type || "N/D"}\n\n` +
+      `📖 *Sinopsis:*\n${data.synopsis || "No disponible"}`
 
     await conn.sendMessage(
       m.chat,
-      { text },
+      {
+        text: msg,
+        image: data.poster ? { url: data.poster } : undefined
+      },
       { quoted: m }
     )
 
@@ -47,11 +46,11 @@ const handler = async (m, { conn }) => {
   } catch (e) {
     console.error("MOVIE ERROR:", e)
     await m.react("❌")
-    m.reply("⚠ Error al obtener películas.")
+    m.reply("⚠ Error al obtener la película.")
   }
 }
 
-handler.command = ["movie", "movies"]
+handler.command = ["movie", "pelicula"]
 handler.tags = ["entretenimiento"]
 handler.register = true
 
