@@ -1,8 +1,10 @@
 import yts from "yt-search";
 import fetch from "node-fetch";
 
-const handler = async (m, { conn, text, usedPrefix, command }) => {
-  if (!text) return m.reply("🎶 Ingresa el nombre o el enlace de YouTube.");
+const DARKCORE_KEY = "shd_488b9c30e05c0927d77f79a6"; // tu key
+
+const handler = async (m, { conn, text }) => {
+  if (!text) return m.reply("🎶 Ingresa nombre o enlace de YouTube.");
 
   await m.react("🕘");
 
@@ -14,8 +16,8 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     let views = "Desconocidas";
     let thumbnail = "";
 
-    // Buscador de YouTube si no es link
-    if (!text.startsWith("https://")) {
+    // si no es link, busca
+    if (!text.startsWith("http")) {
       const res = await yts(text);
       if (!res?.videos?.length) return m.reply("🚫 No encontré resultados.");
       const video = res.videos[0];
@@ -40,10 +42,9 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 🔗 𝑬𝒏𝒍𝒂𝒄𝒆: ${url}
 
 ✧━───『 gһ᥆s𝗍 ᑲ᥆𝗍 』───━✧
-⚡ 𝑷𝒐𝒘𝒆𝒓𝒆𝒅 𝒃𝒚 𝒀𝒐𝒔𝒖𝒆 :D ⚡
+⚡ 𝑷𝒐𝒘𝒆𝒓𝒆𝒅 𝒃𝒚 Picolas ⚡
 `;
 
-    // Enviamos el mensaje con botones
     await conn.sendMessage(
       m.chat,
       {
@@ -51,8 +52,8 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
         caption,
         footer: "⚡ Shadow — Descargas rápidas ⚡",
         buttons: [
-          { buttonId: `shadowaudio ${url}`, buttonText: { displayText: "🎵 Audio" }, type: 1 },
-          { buttonId: `shadowvideo ${url}`, buttonText: { displayText: "🎬 Video" }, type: 1 },
+          { buttonId: `playaudio ${url}`, buttonText: { displayText: "🎵 Audio" }, type: 1 },
+          { buttonId: `playvideo ${url}`, buttonText: { displayText: "🎬 Video" }, type: 1 },
         ],
         headerType: 4,
       },
@@ -60,38 +61,36 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     );
 
     await m.react("✅");
+
   } catch (e) {
     m.reply("❌ Error: " + e.message);
   }
 };
 
-// Manejador de los botones
+// botones
 handler.before = async (m, { conn }) => {
   const selected = m?.message?.buttonsResponseMessage?.selectedButtonId;
   if (!selected) return;
 
-  const parts = selected.split(" ");
-  const cmd = parts.shift();
+  const [cmd, ...parts] = selected.split(" ");
   const url = parts.join(" ");
 
-  if (cmd === "shadowaudio") return downloadMedia(conn, m, url, "mp3");
-  if (cmd === "shadowvideo") return downloadMedia(conn, m, url, "mp4");
+  if (cmd === "playaudio") return downloadMedia(conn, m, url, "mp3");
+  if (cmd === "playvideo") return downloadMedia(conn, m, url, "mp4");
 };
 
-// Función principal de descarga
+// descarga
 const downloadMedia = async (conn, m, url, type) => {
   try {
-    const sent = await conn.sendMessage(m.chat, { text: `⏳ Procesando ${type}...` }, { quoted: m });
+    await conn.sendMessage(m.chat, { text: `⏳ Procesando ${type}...` }, { quoted: m });
 
-    // Tu API corregida con la nueva Key
-    const apiUrl = `https://api.darkcore.xyz/api/descargar/mp3/mp4?url=${encodeURIComponent(url)}&key=shd_488b9c30e05c0927d77f79a6`;
+    const apiUrl = `https://api.darkcore.xyz/api/descargar/${type}?url=${encodeURIComponent(url)}&key=${DARKCORE_KEY}`;
 
     const r = await fetch(apiUrl);
     const data = await r.json();
 
-    if (!data?.status) return m.reply("🚫 Error: La API no pudo procesar el archivo.");
+    if (!data?.status) return m.reply("🚫 La API no pudo procesar este video.");
 
-    // Mapeo directo desde la raíz del JSON
     const fileUrl = type === "mp3" ? data.audio_url : data.video_url;
     const fileTitle = cleanName(data.titulo || "Shadow_File");
 
@@ -100,16 +99,13 @@ const downloadMedia = async (conn, m, url, type) => {
     if (type === "mp3") {
       const res = await fetch(fileUrl);
       const audioBuffer = Buffer.from(await res.arrayBuffer());
-      
+
       await conn.sendMessage(
         m.chat,
-        {
-          audio: audioBuffer,
-          mimetype: "audio/mpeg",
-          ptt: false,
-        },
+        { audio: audioBuffer, mimetype: "audio/mpeg", ptt: false },
         { quoted: m }
       );
+
     } else {
       await conn.sendMessage(
         m.chat,
@@ -123,7 +119,7 @@ const downloadMedia = async (conn, m, url, type) => {
       );
     }
 
-    await conn.sendMessage(m.chat, { text: `✅ ¡Listo!`, edit: sent.key });
+    await conn.sendMessage(m.chat, { text: `✅ ¡Listo!` });
     await m.react("✅");
 
   } catch (e) {
@@ -132,9 +128,8 @@ const downloadMedia = async (conn, m, url, type) => {
   }
 };
 
-// Utilidades
+// utilidades
 const cleanName = (name) => name.replace(/[^\w\s-_.]/gi, "").substring(0, 50);
-
 const formatViews = (views) => {
   if (!views) return "0";
   if (views >= 1e9) return `${(views / 1e9).toFixed(1)}B`;
@@ -143,7 +138,7 @@ const formatViews = (views) => {
   return views.toString();
 };
 
-handler.command = ["play", "play2", "ytmp3", "ytmp4", "yt"];
+handler.command = ["play", "play2", "yt", "ytmp3", "ytmp4"];
 handler.tags = ["descargas"];
 handler.register = true;
 
