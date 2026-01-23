@@ -1,70 +1,90 @@
 import yts from "yt-search"
 import fetch from "node-fetch"
 
-const DARKCORE_KEY = "shd_488b9c30e05c0927d77f79a6"
-
+// ─────────────────────────────
+// 🧼 Limpiar URL YouTube (quita playlist / radio)
+// ─────────────────────────────
 const cleanYoutubeUrl = (url) => {
   try {
     const u = new URL(url)
-    return `https://www.youtube.com/watch?v=${u.searchParams.get("v")}`
+    const id = u.searchParams.get("v")
+    return id ? `https://www.youtube.com/watch?v=${id}` : url
   } catch {
     return url
   }
 }
 
+// ─────────────────────────────
+// 🎶 COMANDO PLAY
+// ─────────────────────────────
 const handler = async (m, { conn, text }) => {
-  if (!text) return m.reply("🎶 Escribí el nombre o link de YouTube")
+  if (!text) {
+    return m.reply("🎧 *Usá:* `.play nombre o link de YouTube`")
+  }
 
-  await m.react("🕘")
+  await m.react("🎵")
 
   try {
-    let url = text
-    let title = ""
-    let channel = ""
-    let duration = ""
-    let views = ""
-    let thumbnail = ""
+    let videoUrl = text
+    let title = "Desconocido"
+    let channel = "Desconocido"
+    let duration = "N/D"
+    let views = 0
+    let thumbnail = null
 
-    // 🔍 buscar si no es link
+    // 🔍 Buscar si no es link
     if (!text.startsWith("http")) {
       const res = await yts(text)
-      if (!res.videos.length) return m.reply("🚫 No encontré resultados")
+      if (!res.videos.length) {
+        return m.reply("🚫 No encontré resultados.")
+      }
 
       const v = res.videos[0]
-      url = v.url
+      videoUrl = v.url
       title = v.title
-      channel = v.author.name
-      duration = v.timestamp
-      views = v.views
+      channel = v.author?.name || "Desconocido"
+      duration = v.timestamp || "N/D"
+      views = v.views || 0
       thumbnail = v.thumbnail
     }
 
-    // 🧼 limpiar URL (CLAVE)
-    url = cleanYoutubeUrl(url)
+    // 🧼 limpiar URL
+    videoUrl = cleanYoutubeUrl(videoUrl)
 
-    const caption = `
-🎵 *${title}*
-👤 Canal: ${channel}
-👁️ Vistas: ${formatViews(views)}
-⏱ Duración: ${duration}
-
-🔗 ${url}
+    const menuText = `
+╭─── 🎶 *PLAY MUSIC* 🎶 ───╮
+│
+│ 🎵 *Título:* ${title}
+│ 👤 *Canal:* ${channel}
+│ ⏱ *Duración:* ${duration}
+│ 👁 *Vistas:* ${formatViews(views)}
+│
+╰─── 🔽 Elegí una opción 🔽 ───╯
 `
 
-    const thumb = thumbnail
+    const img = thumbnail
       ? (await conn.getFile(thumbnail)).data
       : null
 
     await conn.sendMessage(
       m.chat,
       {
-        image: thumb,
-        caption,
+        image: img,
+        caption: menuText,
+        footer: "👻 Ghost Bot • Descargas rápidas",
         buttons: [
-          { buttonId: `ytdlaudio ${url}`, buttonText: { displayText: "🎧 Audio" }, type: 1 },
-          { buttonId: `ytdlvideo ${url}`, buttonText: { displayText: "🎬 Video" }, type: 1 }
+          {
+            buttonId: `play_audio ${videoUrl}`,
+            buttonText: { displayText: "🎧 Descargar Audio (MP3)" },
+            type: 1,
+          },
+          {
+            buttonId: `play_video ${videoUrl}`,
+            buttonText: { displayText: "🎬 Descargar Video (MP4)" },
+            type: 1,
+          },
         ],
-        headerType: 4
+        headerType: 4,
       },
       { quoted: m }
     )
@@ -72,65 +92,97 @@ const handler = async (m, { conn, text }) => {
     await m.react("✅")
   } catch (e) {
     console.error(e)
-    m.reply("❌ Error en play")
+    m.reply("❌ Error al procesar el video.")
   }
 }
 
+// ─────────────────────────────
+// 🔘 BOTONES
+// ─────────────────────────────
 handler.before = async (m, { conn }) => {
-  const sel = m?.message?.buttonsResponseMessage?.selectedButtonId
-  if (!sel) return
+  const selected = m?.message?.buttonsResponseMessage?.selectedButtonId
+  if (!selected) return
 
-  const [cmd, url] = sel.split(" ")
+  const [cmd, url] = selected.split(" ")
 
-  if (cmd === "ytdlaudio") return download(conn, m, url, "audio")
-  if (cmd === "ytdlvideo") return download(conn, m, url, "video")
+  if (cmd === "play_audio") return download(conn, m, url, "audio")
+  if (cmd === "play_video") return download(conn, m, url, "video")
 }
 
+// ─────────────────────────────
+// ⬇️ DESCARGA (SIN KEY)
+// ─────────────────────────────
 const download = async (conn, m, url, type) => {
   try {
-    const apiUrl = `https://api.darkcore.xyz/api/descargar/ytdl?url=${encodeURIComponent(url)}&key=shd_488b9c30e05c0927d77f79a6`
+    await conn.sendMessage(
+      m.chat,
+      { text: "⏳ *Procesando descarga...*" },
+      { quoted: m }
+    )
 
-    const r = await fetch(apiUrl)
-    const data = await r.json()
+    const apiUrl = `https://api.darkcore.xyz/api/descargar/ytdl?url=${encodeURIComponent(
+      url
+    )}`
+
+    const res = await fetch(apiUrl)
+    const data = await res.json()
 
     if (!data?.status) {
-      return m.reply("🚫 La API no pudo procesar este video")
+      return m.reply("🚫 La API no pudo procesar este video.")
     }
 
-    // 🔥 FIX CLAVE
     const fileUrl = type === "audio" ? data.audio : data.video
+    const title = cleanName(data.title || "Archivo")
 
     if (!fileUrl) {
-      console.log("RESPUESTA API:", data)
-      return m.reply("🚫 Archivo no disponible")
+      return m.reply("🚫 Archivo no disponible.")
     }
 
     if (type === "audio") {
-      const buf = Buffer.from(await (await fetch(fileUrl)).arrayBuffer())
+      const buffer = Buffer.from(
+        await (await fetch(fileUrl)).arrayBuffer()
+      )
+
       await conn.sendMessage(
         m.chat,
-        { audio: buf, mimetype: "audio/mpeg" },
+        {
+          audio: buffer,
+          mimetype: "audio/mpeg",
+          ptt: false,
+        },
         { quoted: m }
       )
     } else {
       await conn.sendMessage(
         m.chat,
-        { video: { url: fileUrl }, mimetype: "video/mp4" },
+        {
+          video: { url: fileUrl },
+          mimetype: "video/mp4",
+          fileName: `${title}.mp4`,
+          caption: `🎬 *${title}*`,
+        },
         { quoted: m }
       )
     }
 
+    await m.react("🎉")
   } catch (e) {
     console.error(e)
-    m.reply("❌ Error en descarga")
+    m.reply("❌ Error durante la descarga.")
   }
 }
 
-const formatViews = (v) => {
-  if (!v) return "0"
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + "M"
-  if (v >= 1e3) return (v / 1e3).toFixed(1) + "K"
-  return v.toString()
+// ─────────────────────────────
+// 🛠 UTILIDADES
+// ─────────────────────────────
+const cleanName = (name) =>
+  name.replace(/[^\w\s-_.]/gi, "").substring(0, 60)
+
+const formatViews = (views) => {
+  if (views >= 1e9) return (views / 1e9).toFixed(1) + "B"
+  if (views >= 1e6) return (views / 1e6).toFixed(1) + "M"
+  if (views >= 1e3) return (views / 1e3).toFixed(1) + "K"
+  return views.toString()
 }
 
 handler.command = ["play", "yt"]
