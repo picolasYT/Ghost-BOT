@@ -130,56 +130,111 @@ const download = async (conn, m, url, type) => {
     )
 
     let data = null
+    let successApi = null
+
+    // APIs en orden de confiabilidad
     const apiUrls = [
-      `https://api.darkcore.xyz/api/descargar/ytdl?url=${encodeURIComponent(url)}`,
-      `https://api.ryzendesu.vip/api/ytdl?url=${encodeURIComponent(url)}`,
+      {
+        name: "Darkcore",
+        url: `https://api.darkcore.xyz/api/descargar/ytdl?url=${encodeURIComponent(url)}`,
+        extractAudio: (d) => d?.audio,
+        extractVideo: (d) => d?.video,
+      },
+      {
+        name: "Ryzendesu",
+        url: `https://api.ryzendesu.vip/api/ytdl?url=${encodeURIComponent(url)}`,
+        extractAudio: (d) => d?.result?.audio,
+        extractVideo: (d) => d?.result?.video,
+      },
+      {
+        name: "YT API 1",
+        url: `https://api.advaith.workers.dev?url=${encodeURIComponent(url)}`,
+        extractAudio: (d) => d?.audio,
+        extractVideo: (d) => d?.video,
+      },
+      {
+        name: "YT API 2",
+        url: `https://yt-api.p.rapidapi.com/dl?id=${extractVideoId(url)}`,
+        extractAudio: (d) => d?.links?.find(l => l.quality === "128")?.url,
+        extractVideo: (d) => d?.links?.find(l => l.quality === "18")?.url,
+        headers: {
+          "x-rapidapi-key": "tu-api-key", // Configura esto si lo tienes
+          "x-rapidapi-host": "yt-api.p.rapidapi.com"
+        }
+      }
     ]
 
     // Intentar con múltiples APIs
-    for (const apiUrl of apiUrls) {
+    for (const api of apiUrls) {
       try {
-        const res = await fetch(apiUrl, { timeout: 30000 })
-        if (!res.ok) {
-          console.warn(`API respondió con ${res.status}`)
+        console.log(`🔄 Intentando con ${api.name}...`)
+        
+        const response = await fetch(api.url, {
+          timeout: 20000,
+          headers: api.headers || {}
+        })
+
+        if (!response.ok) {
+          console.warn(`${api.name} - HTTP ${response.status}`)
           continue
         }
-        
-        const jsonData = await res.json()
-        console.log("Respuesta API:", JSON.stringify(jsonData).substring(0, 200))
-        
-        // Validar estructura de respuesta
-        if (isValidResponse(jsonData, type)) {
+
+        const jsonData = await response.json()
+        console.log(`📊 ${api.name} respondió:`, JSON.stringify(jsonData).substring(0, 300))
+
+        // Validar que tenga datos
+        if (!jsonData) {
+          console.warn(`${api.name} - Respuesta vacía`)
+          continue
+        }
+
+        // Intentar extraer URLs
+        const audioUrl = type === "audio" ? api.extractAudio(jsonData) : null
+        const videoUrl = type === "video" ? api.extractVideo(jsonData) : null
+        const fileUrl = type === "audio" ? audioUrl : videoUrl
+
+        if (fileUrl) {
           data = jsonData
-          console.log("✅ API válida encontrada")
+          successApi = api.name
+          console.log(`✅ Éxito con ${api.name}`)
           break
         }
       } catch (err) {
-        console.error(`API ${apiUrl} falló:`, err.message)
+        console.error(`❌ ${api.name} error:`, err.message)
         continue
       }
     }
 
-    if (!data) {
+    if (!data || !successApi) {
+      console.error("❌ Ninguna API funcionó")
       await m.react("❌")
-      return m.reply("🚫 No se pudo descargar. Intenta más tarde.")
+      return m.reply("🚫 No se pudo descargar. Intenta más tarde.\n(Las APIs están caídas)")
     }
 
     // Extraer URLs según estructura de respuesta
-    const fileUrl = extractFileUrl(data, type)
+    const fileUrl = type === "audio" ? 
+      (data.audio || data.result?.audio || data.links?.[0]?.url) : 
+      (data.video || data.result?.video || data.links?.[0]?.url)
+    
     const title = cleanName(data.title || data.filename || data.name || "Archivo")
 
     if (!fileUrl) {
+      console.error("❌ No se encontró URL de archivo")
       await m.react("❌")
       return m.reply("🚫 Archivo no disponible.")
     }
+
+    console.log(`📥 Descargando desde: ${fileUrl}`)
 
     if (type === "audio") {
       try {
         const response = await fetch(fileUrl, { timeout: 60000 })
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        
+
         const arrayBuffer = await response.arrayBuffer()
         const buffer = Buffer.from(new Uint8Array(arrayBuffer))
+
+        console.log(`📦 Tamaño del audio: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`)
 
         if (buffer.length === 0) {
           await m.react("❌")
@@ -196,17 +251,19 @@ const download = async (conn, m, url, type) => {
           { quoted: m }
         )
       } catch (err) {
-        console.error("Error descargando audio:", err)
+        console.error("❌ Error descargando audio:", err)
         await m.react("❌")
-        return m.reply("❌ Error al descargar el audio.")
+        return m.reply(`❌ Error al descargar el audio.\n${err.message}`)
       }
     } else {
       try {
         const response = await fetch(fileUrl, { timeout: 60000 })
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        
+
         const arrayBuffer = await response.arrayBuffer()
         const buffer = Buffer.from(new Uint8Array(arrayBuffer))
+
+        console.log(`📦 Tamaño del video: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`)
 
         if (buffer.length === 0) {
           await m.react("❌")
@@ -224,67 +281,31 @@ const download = async (conn, m, url, type) => {
           { quoted: m }
         )
       } catch (err) {
-        console.error("Error descargando video:", err)
+        console.error("❌ Error descargando video:", err)
         await m.react("❌")
-        return m.reply("❌ Error al descargar el video.")
+        return m.reply(`❌ Error al descargar el video.\n${err.message}`)
       }
     }
 
+    console.log(`✅ Descarga completada - API: ${successApi}`)
     await m.react("🎉")
   } catch (e) {
-    console.error("Error general en download:", e)
+    console.error("❌ Error general en download:", e)
     await m.react("❌")
-    m.reply("❌ Error durante la descarga.")
+    m.reply(`❌ Error durante la descarga.\n${e.message}`)
   }
 }
 
 // ─────────────────────────────
-// 🛠 VALIDAR RESPUESTA JSON
+// 🛠 EXTRAER ID DE VIDEO
 // ─────────────────────────────
-const isValidResponse = (data, type) => {
-  if (!data) return false
-  
-  // Verifica múltiples estructuras posibles
-  if (data.status === true || data.status === "success") {
-    if (type === "audio") return !!(data.audio || data.result?.audio || data.data?.audio)
-    if (type === "video") return !!(data.video || data.result?.video || data.data?.video)
+const extractVideoId = (url) => {
+  try {
+    const u = new URL(url)
+    return u.searchParams.get("v") || url.split("v=")[1]
+  } catch {
+    return url
   }
-  
-  if (type === "audio") return !!(data.audio || data.mp3 || data.result?.audio)
-  if (type === "video") return !!(data.video || data.mp4 || data.result?.video)
-  
-  return false
-}
-
-// ─────────────────────────────
-// 🛠 EXTRAER URL DEL ARCHIVO
-// ─────────────────────────────
-const extractFileUrl = (data, type) => {
-  if (!data) return null
-
-  if (type === "audio") {
-    return (
-      data.audio ||
-      data.mp3 ||
-      data.result?.audio ||
-      data.data?.audio ||
-      data.download?.audio ||
-      null
-    )
-  }
-
-  if (type === "video") {
-    return (
-      data.video ||
-      data.mp4 ||
-      data.result?.video ||
-      data.data?.video ||
-      data.download?.video ||
-      null
-    )
-  }
-
-  return null
 }
 
 // ─────────────────────────────
