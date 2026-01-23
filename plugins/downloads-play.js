@@ -139,10 +139,18 @@ const download = async (conn, m, url, type) => {
     for (const apiUrl of apiUrls) {
       try {
         const res = await fetch(apiUrl, { timeout: 30000 })
-        if (!res.ok) continue
+        if (!res.ok) {
+          console.warn(`API respondió con ${res.status}`)
+          continue
+        }
         
-        data = await res.json()
-        if (data?.status && (data?.audio || data?.video)) {
+        const jsonData = await res.json()
+        console.log("Respuesta API:", JSON.stringify(jsonData).substring(0, 200))
+        
+        // Validar estructura de respuesta
+        if (isValidResponse(jsonData, type)) {
+          data = jsonData
+          console.log("✅ API válida encontrada")
           break
         }
       } catch (err) {
@@ -151,13 +159,14 @@ const download = async (conn, m, url, type) => {
       }
     }
 
-    if (!data?.status || (!data?.audio && !data?.video)) {
+    if (!data) {
       await m.react("❌")
       return m.reply("🚫 No se pudo descargar. Intenta más tarde.")
     }
 
-    const fileUrl = type === "audio" ? data.audio : data.video
-    const title = cleanName(data.title || "Archivo")
+    // Extraer URLs según estructura de respuesta
+    const fileUrl = extractFileUrl(data, type)
+    const title = cleanName(data.title || data.filename || data.name || "Archivo")
 
     if (!fileUrl) {
       await m.react("❌")
@@ -227,6 +236,55 @@ const download = async (conn, m, url, type) => {
     await m.react("❌")
     m.reply("❌ Error durante la descarga.")
   }
+}
+
+// ─────────────────────────────
+// 🛠 VALIDAR RESPUESTA JSON
+// ─────────────────────────────
+const isValidResponse = (data, type) => {
+  if (!data) return false
+  
+  // Verifica múltiples estructuras posibles
+  if (data.status === true || data.status === "success") {
+    if (type === "audio") return !!(data.audio || data.result?.audio || data.data?.audio)
+    if (type === "video") return !!(data.video || data.result?.video || data.data?.video)
+  }
+  
+  if (type === "audio") return !!(data.audio || data.mp3 || data.result?.audio)
+  if (type === "video") return !!(data.video || data.mp4 || data.result?.video)
+  
+  return false
+}
+
+// ─────────────────────────────
+// 🛠 EXTRAER URL DEL ARCHIVO
+// ─────────────────────────────
+const extractFileUrl = (data, type) => {
+  if (!data) return null
+
+  if (type === "audio") {
+    return (
+      data.audio ||
+      data.mp3 ||
+      data.result?.audio ||
+      data.data?.audio ||
+      data.download?.audio ||
+      null
+    )
+  }
+
+  if (type === "video") {
+    return (
+      data.video ||
+      data.mp4 ||
+      data.result?.video ||
+      data.data?.video ||
+      data.download?.video ||
+      null
+    )
+  }
+
+  return null
 }
 
 // ─────────────────────────────
