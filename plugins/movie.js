@@ -19,12 +19,16 @@ const handler = async (m, { conn }) => {
 
     const data = await res.json()
 
-    if (!Array.isArray(data) || !data.length)
+    // 🔥 ACA ESTA EL FIX
+    const movies = data?.titles || data || []
+
+    if (!Array.isArray(movies) || !movies.length) {
       return m.reply("❌ No se pudieron obtener películas.")
+    }
 
     let text = "🎬 *Películas disponibles*\n\n"
 
-    for (const movie of data) {
+    for (const movie of movies) {
       text +=
         `🎥 *${movie.title || "Sin título"}*\n` +
         `📅 Año: ${movie.releaseYear || "N/D"}\n` +
@@ -41,7 +45,7 @@ const handler = async (m, { conn }) => {
     await m.react("✅")
 
   } catch (e) {
-    console.error(e)
+    console.error("MOVIE ERROR:", e)
     await m.react("❌")
     m.reply("⚠ Error al obtener películas.")
   }
