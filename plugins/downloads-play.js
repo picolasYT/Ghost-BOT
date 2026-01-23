@@ -88,7 +88,7 @@ handler.before = async (m, { conn }) => {
 
 const download = async (conn, m, url, type) => {
   try {
-    const apiUrl = `https://api.darkcore.xyz/api/descargar/ytdl?url=${encodeURIComponent(url)}&key=${DARKCORE_KEY}`
+    const apiUrl = `https://api.darkcore.xyz/api/descargar/ytdl?url=${encodeURIComponent(url)}&key=shd_488b9c30e05c0927d77f79a6`
 
     const r = await fetch(apiUrl)
     const data = await r.json()
@@ -97,12 +97,13 @@ const download = async (conn, m, url, type) => {
       return m.reply("🚫 La API no pudo procesar este video")
     }
 
-    const fileUrl =
-      type === "audio"
-        ? data?.result?.audio
-        : data?.result?.video
+    // 🔥 FIX CLAVE
+    const fileUrl = type === "audio" ? data.audio : data.video
 
-    if (!fileUrl) return m.reply("🚫 Archivo no disponible")
+    if (!fileUrl) {
+      console.log("RESPUESTA API:", data)
+      return m.reply("🚫 Archivo no disponible")
+    }
 
     if (type === "audio") {
       const buf = Buffer.from(await (await fetch(fileUrl)).arrayBuffer())
