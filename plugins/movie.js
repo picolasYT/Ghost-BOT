@@ -3,12 +3,29 @@ import fetch from "node-fetch"
 const RAPID_KEY = "814651014emsh71e028776d9a33dp1600e6jsn2e4b042ad0f6"
 const RAPID_HOST = "netflix133.p.rapidapi.com"
 
+// IDs conocidos (podés agregar más)
+const RANDOM_IDS = [
+  "81040344",
+  "80192098",
+  "70264888",
+  "81215567",
+  "80100172"
+]
+
 const handler = async (m, { conn, text }) => {
   try {
     await m.react("🎬")
 
-    // ID fijo o pasado por comando
-    const contentId = text?.trim() || "81040344"
+    let contentId
+
+    // 🎲 RANDOM
+    if (text && text.toLowerCase() === "random") {
+      contentId = RANDOM_IDS[Math.floor(Math.random() * RANDOM_IDS.length)]
+    } else if (text) {
+      contentId = text.trim()
+    } else {
+      contentId = RANDOM_IDS[0]
+    }
 
     const url = `https://netflix133.p.rapidapi.com/content?contentId=${contentId}`
 
@@ -50,7 +67,7 @@ const handler = async (m, { conn, text }) => {
   }
 }
 
-handler.command = ["movie", "pelicula"]
+handler.command = ["movie"]
 handler.tags = ["entretenimiento"]
 handler.register = true
 
