@@ -6,7 +6,7 @@ const isUrl = /(?:https:?\/{2})?(?:www\.|vm\.|vt\.|t\.)?tiktok\.com\/([^\s&]+)/g
 try {
 await m.react('🕒')
 if (isUrl) {
-const res = await axios.get(`https://ghost-api-wbqx.onrender.com/api/download/tiktok?url=${encodeURIComponent(text)}?hd=1`)
+const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}?hd=1`)
 const data = res.data?.data;
 if (!data?.play) return conn.reply(m.chat, 'ꕥ Enlace inválido o sin contenido descargable.', m)
 const { title, duration, author, created_at, type, images, music, play } = data
