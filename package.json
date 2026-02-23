@@ -1,4 +1,4 @@
-{
+﻿{
 "name": "GhostBOT",
 "version": "1.8.2",
 "description": "WhatsApp Bot Multi Device",
@@ -13,18 +13,17 @@
 },
 "repository": {
 "type": "git",
-"url": "git+https://github.com/The-King-Destroy/YukiBot-MD.git"
+"url": "git+https://github.com/picolasYT/Ghost-BOT.git"
 },  
-"author": "The-King-Destroy",
+"author": "PicolasYT",
 "license": "MIT-License",
 "bugs": {
-"url": "https://github.com/The-King-Destroy/YukiBot-MD/issues"
+"url": "https://github.com/picolasYT/Ghost-BOT/issues"
 },
-"homepage": "https://github.com/The-King-Destroy/YukiBot-MD#readme",
+"homepage": "https://github.com/picolasYT/Ghost-BOT#readme",
 "dependencies": {
 "@hapi/boom": "^10.0.1",
 "@vitalets/google-translate-api": "^8.0.0",
-"@whiskeysockets/baileys": "github:this-xyz/bails",
 "acrcloud": "^1.4.0",
 "aptoide-scraper": "github:DIEGO-OFC/dv-aptoide-scraper",
 "awesome-phonenumber": "^3.4.0",
@@ -54,7 +53,8 @@
 "url-regex-safe": "^3.0.0",
 "ws": "^8.18.3",
 "yargs": "^17.3.1",
-"yt-search": "^2.10.3"
+"yt-search": "^2.10.3",
+"ytdl-core": "^4.11.5"
 },
 "optionalDependencies": {
 "moment-timezone": "^0.5.37",
@@ -62,4 +62,6 @@
 },
 "engines": {
 "node": ">=20.0.0"
-}}
+}
+}
+
