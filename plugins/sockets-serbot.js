@@ -9,7 +9,7 @@ import util from 'util'
 import * as ws from 'ws'
 const { child, spawn, exec } = await import('child_process')
 const { CONNECTING } = ws
-import { makeWASocket } from '../lib/simple.js'
+import { createWASocket } from '../lib/simple.js'
 import { fileURLToPath } from 'url'
 let crm1 = "Y2QgcGx1Z2lucy"
 let crm2 = "A7IG1kNXN1b"
@@ -94,7 +94,7 @@ browser: ['Windows', 'Firefox'],
 version: version,
 generateHighQualityLinkPreview: true
 }
-let sock = makeWASocket(connectionOptions)
+let sock = createWASocket(connectionOptions)
 sock.isInit = false
 let isInit = true
 setTimeout(async () => {
@@ -217,7 +217,7 @@ if (restatConn) {
 const oldChats = sock.chats
 try { sock.ws.close() } catch { }
 sock.ev.removeAllListeners()
-sock = makeWASocket(connectionOptions, { chats: oldChats })
+sock = createWASocket(connectionOptions, { chats: oldChats })
 isInit = true
 }
 if (!isInit) {
